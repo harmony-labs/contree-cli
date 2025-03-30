@@ -20,12 +20,24 @@ struct Args {
     dir: Option<PathBuf>,
 
     /// Include dependency files referenced in errors (Rust projects only)
-    #[arg(short, long)]
+    #[arg(short = 'D', long)]
     include_deps: bool,
 
     /// Output file for project and dependency files
     #[arg(short = 'o', long)]
     output: Option<PathBuf>,
+
+    /// Grep pattern to filter files (e.g., 'transaction' or '/regex/')
+    #[arg(short = 'g', long)]
+    grep: Option<String>,
+
+    /// List of files to include (comma-separated), even if they don't match grep or are outside the directory
+    #[arg(short = 'i', long, value_delimiter = ',', value_parser = parse_pathbuf)]
+    include: Option<Vec<PathBuf>>,
+}
+
+fn parse_pathbuf(s: &str) -> Result<PathBuf, String> {
+    Ok(PathBuf::from(s.trim()))
 }
 
 fn main() -> Result<()> {
@@ -65,7 +77,9 @@ fn main() -> Result<()> {
 
     // Write project context to the output file (or stdout if no file specified)
     writeln!(output_writer, "\n=== Project Context ===\n")?;
-    print_project_files(&cwd, &mut output_writer)?;
+
+    // Print files from the scanned directory with grep filtering
+    print_project_files(&cwd, &args.grep, &args.include, &mut output_writer)?;
 
     // Include dependencies if requested
     if args.include_deps {
@@ -88,8 +102,42 @@ fn is_rust_project(cwd: &Path) -> bool {
     false
 }
 
-// Print all files in the project, respecting .gitignore and .contreeignore
-fn print_project_files(cwd: &PathBuf, writer: &mut Box<dyn Write>) -> Result<()> {
+// Print a single file's contents to the writer
+fn print_file(path: &Path, writer: &mut Box<dyn Write>) -> Result<()> {
+    writeln!(writer, "File: {}", path.display())?;
+    writeln!(writer, "```")?;
+    match fs::read_to_string(path) {
+        Ok(contents) => writeln!(writer, "{}", contents)?,
+        Err(e) if e.to_string().contains("stream did not contain valid UTF-8") => {
+            writeln!(writer, "[binary file]")?;
+        }
+        Err(e) => return Err(anyhow::Error::from(e).context(format!("Failed to read file: {}", path.display()))),
+    }
+    writeln!(writer, "```")?;
+    writeln!(writer)?;
+    Ok(())
+}
+
+// Print all files in the project, respecting .gitignore, .contreeignore, grep filter, and include list
+fn print_project_files(
+    cwd: &PathBuf,
+    grep_pattern: &Option<String>,
+    include_files: &Option<Vec<PathBuf>>,
+    writer: &mut Box<dyn Write>,
+) -> Result<()> {
+    // Compile the grep pattern into a regex if provided
+    let grep_regex = grep_pattern.as_ref().map(|pattern| {
+        let trimmed = pattern.trim();
+        if trimmed.starts_with('/') && trimmed.ends_with('/') {
+            Regex::new(&trimmed[1..trimmed.len() - 1])
+                .context("Invalid regex pattern")
+        } else {
+            Regex::new(&format!("(?i){}", regex::escape(trimmed)))
+                .context("Invalid grep pattern")
+        }
+    }).transpose()?;
+
+    // Build the walker for the directory
     let mut builder = WalkBuilder::new(cwd);
     builder.standard_filters(true); // Respect .gitignore, etc.
     builder.hidden(false); // Skip hidden files/directories like .git by default
@@ -111,19 +159,37 @@ fn print_project_files(cwd: &PathBuf, writer: &mut Box<dyn Write>) -> Result<()>
         let entry = entry.context("Failed to read directory entry")?;
         if entry.file_type().map_or(false, |ft| ft.is_file()) {
             let path = entry.path();
-            writeln!(writer, "File: {}", path.display())?;
-            writeln!(writer, "```")?;
-            match fs::read_to_string(path) {
-                Ok(contents) => writeln!(writer, "{}", contents)?,
-                Err(e) if e.to_string().contains("stream did not contain valid UTF-8") => {
-                    writeln!(writer, "[binary file]")?;
+
+            // Apply grep filter if provided
+            if let Some(ref regex) = grep_regex {
+                let contents = match fs::read_to_string(path) {
+                    Ok(contents) => contents,
+                    Err(e) if e.to_string().contains("stream did not contain valid UTF-8") => continue, // Skip binary files
+                    Err(e) => return Err(anyhow::Error::from(e).context(format!("Failed to read file: {}", path.display()))),
+                };
+                if !regex.is_match(&contents) {
+                    continue; // Skip files that don't match the grep pattern
                 }
-                Err(e) => return Err(anyhow::Error::from(e).context(format!("Failed to read file: {}", path.display()))),
             }
-            writeln!(writer, "```")?;
-            writeln!(writer)?;
+
+            print_file(path, writer)?;
         }
     }
+
+    // Process explicitly included files
+    if let Some(ref include_files) = include_files {
+        for path in include_files {
+            // Skip if the file doesn't exist or isn't a file
+            if !path.exists() || !path.is_file() {
+                eprintln!("Warning: Included path {} does not exist or is not a file", path.display());
+                continue;
+            }
+
+            // Print the file regardless of grep filter or directory
+            print_file(path, writer)?;
+        }
+    }
+
     Ok(())
 }
 

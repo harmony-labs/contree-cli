@@ -1,3 +1,7 @@
+GREP ?=
+INCLUDE ?=
+INCLUDE_DEPS ?=
+
 build:
 	cargo build
 
@@ -9,3 +13,15 @@ install:
 
 release:
 	cargo build --release
+
+run:
+	cargo run --
+
+run-grep:
+	cargo run -- --grep $(GREP)
+
+run-include:
+	cargo run -- --include $(INCLUDE)
+
+run-include-deps:
+	cargo run -- --include-deps $(INCLUDE_DEPS)
