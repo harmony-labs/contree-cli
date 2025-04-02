@@ -9,5 +9,4 @@ jobs:
   quality:
     uses: harmony-labs/workflow-rust/.github/workflows/quality.yaml@main
     with:
-      cargo_test_args: '--verbose'
       lint: true
