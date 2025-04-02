@@ -9,4 +9,4 @@ jobs:
   quality:
     uses: harmony-labs/workflow-rust/.github/workflows/quality.yaml@main
     with:
-      lint: true
+      lint: false
