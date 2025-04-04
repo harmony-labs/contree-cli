@@ -34,6 +34,10 @@ struct Args {
     /// List of files to include (comma-separated), even if they don't match grep or are outside the directory
     #[arg(short = 'i', long, value_delimiter = ',', value_parser = parse_pathbuf)]
     include: Option<Vec<PathBuf>>,
+
+    /// Maximum depth of directories to scan (relative to dir), unlimited if not specified
+    #[arg(long)]
+    max_depth: Option<usize>,
 }
 
 fn parse_pathbuf(s: &str) -> Result<PathBuf, String> {
@@ -79,7 +83,7 @@ fn main() -> Result<()> {
     writeln!(output_writer, "\n=== Project Context ===\n")?;
 
     // Print files from the scanned directory with grep filtering
-    print_project_files(&cwd, &args.grep, &args.include, &mut output_writer)?;
+    print_project_files(&cwd, &args.grep, &args.include, &args.max_depth, &mut output_writer)?;
 
     // Include dependencies if requested
     if args.include_deps {
@@ -118,11 +122,12 @@ fn print_file(path: &Path, writer: &mut Box<dyn Write>) -> Result<()> {
     Ok(())
 }
 
-// Print all files in the project, respecting .gitignore, .contreeignore, grep filter, and include list
+// Print all files in the project, respecting .gitignore, .contreeignore, grep filter, include list, and max depth
 fn print_project_files(
     cwd: &PathBuf,
     grep_pattern: &Option<String>,
     include_files: &Option<Vec<PathBuf>>,
+    max_depth: &Option<usize>,
     writer: &mut Box<dyn Write>,
 ) -> Result<()> {
     // Compile the grep pattern into a regex if provided
@@ -145,6 +150,11 @@ fn print_project_files(
     builder.git_exclude(false);
     builder.add_custom_ignore_filename(".contreeignore");
     builder.add_ignore(".git"); // Explicitly ignore .git directories
+    
+    // Set max depth if specified
+    if let Some(depth) = max_depth {
+        builder.max_depth(Some(*depth));
+    }
 
     // Add a custom filter to explicitly exclude .git directories at any depth
     builder.filter_entry(|entry| {
