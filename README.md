@@ -54,6 +54,7 @@ contree
 
 ### Options
 - `-d, --dir <PATH>`: Specify the directory to scan (defaults to `.`).
+- `--max-depth <NUMBER>`: Maximum depth of directories to scan (relative to dir), unlimited if not specified.
 - `-g, --grep <PATTERN>`: Filter files by content matching a pattern (plain text or `/regex/` for regex).
 - `-i, --include <FILES>`: Comma-separated list of files to include (e.g., `file1.rs,file2.rs`).
 - `-D, --include-deps`: Include dependency files referenced in errors (Rust projects only).
@@ -79,7 +80,12 @@ contree
    cargo test | contree --include-deps
    ```
 
-4. Use Makefile targets:
+4. Scan a directory with a maximum depth of 2:
+   ```bash
+   contree --dir src --max-depth 2
+   ```
+
+5. Use Makefile targets:
    ```bash
    make run-grep GREP=transaction
    make run-include INCLUDE=src/main.rs
