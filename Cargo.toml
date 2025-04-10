@@ -2,6 +2,12 @@
 name = "contree"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/harmony-labs/contree-cli"
+homepage = "https://github.com/harmony-labs/contree-cli"
+documentation = "https://docs.rs/contree"
+keywords = ["cli", "context", "rust", "project", "tool"]
+authors = ["@mateodelnorte"]
 
 [dependencies]
 anyhow = "1.0"          # Error handling

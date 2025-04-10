@@ -1,6 +1,18 @@
 # Contree CLI
 
+[![Build Status](https://github.com/harmony-labs/contree-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/harmony-labs/contree-cli/actions)
+[![Crates.io](https://img.shields.io/crates/v/contree-cli.svg)](https://crates.io/crates/contree-cli)
+[![Docs.rs](https://docs.rs/contree-cli/badge.svg)](https://docs.rs/contree-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A Rust-based command-line utility to provide project context by scanning directories and optionally including relevant dependency files, with support for filtering and custom output.
+
+## Quick Start
+
+```bash
+cargo install contree-cli
+contree --help
+```
 
 ## Overview
 
@@ -66,7 +78,7 @@ contree
    ```
    Or with regex:
    ```bash
-   contree --grep "/(D|d)atabase/" 
+   contree --grep "/(D|d)atabase/"
    ```
 
 2. Include specific files and output to a file:
@@ -122,8 +134,26 @@ make release
 - Dependency file inclusion relies on `cargo tree` and the local Cargo registry (typically `~/.cargo/registry`).
 - Binary files are skipped during grep filtering and marked as `[binary file]` in output.
 
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Code of Conduct
+
+This project adheres to the [Contributor Covenant](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+
+## Security
+
+If you discover a security vulnerability, please see [SECURITY.md](SECURITY.md) for how to report it.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
 ## License
-This project is unlicensed by default. Add a `LICENSE` file to specify terms if intended for distribution.
+
+This project is licensed under the terms of the [MIT License](LICENSE).
 
 ## Author
+
 @mateodelnorte
