@@ -58,6 +58,7 @@ contree
 - `-i, --include <FILES>`: Comma-separated list of files to include (e.g., `file1.rs,file2.rs`).
 - `-D, --include-deps`: Include dependency files referenced in errors (Rust projects only).
 - `-o, --output <FILE>`: Write output to a file instead of stdout.
+- `-e, --exclude <FILES>`: Comma-separated list of specific files to exclude (e.g., `src/config.rs,tests/data.txt`). Paths should be relative to the scanned directory.
 
 ### Examples
 1. Scan the current directory and filter files containing "transaction":
@@ -79,7 +80,12 @@ contree
    cargo test | contree --include-deps
    ```
 
-4. Use Makefile targets:
+4. Exclude specific files:
+   ```bash
+   contree --exclude src/config.rs,tests/data.txt
+   ```
+
+5. Use Makefile targets:
    ```bash
    make run-grep GREP=transaction
    make run-include INCLUDE=src/main.rs
