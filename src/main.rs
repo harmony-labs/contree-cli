@@ -34,6 +34,10 @@ struct Args {
     /// List of files to include (comma-separated), even if they don't match grep or are outside the directory
     #[arg(short = 'i', long, value_delimiter = ',', value_parser = parse_pathbuf)]
     include: Option<Vec<PathBuf>>,
+
+    /// List of files to exclude (comma-separated), relative to the scanned directory
+    #[arg(short = 'e', long, value_delimiter = ',', value_parser = parse_pathbuf)]
+    exclude: Option<Vec<PathBuf>>,
 }
 
 fn parse_pathbuf(s: &str) -> Result<PathBuf, String> {
@@ -79,7 +83,7 @@ fn main() -> Result<()> {
     writeln!(output_writer, "\n=== Project Context ===\n")?;
 
     // Print files from the scanned directory with grep filtering
-    print_project_files(&cwd, &args.grep, &args.include, &mut output_writer)?;
+    print_project_files(&cwd, &args.grep, &args.include, &args.exclude, &mut output_writer)?; // Pass the correct args.exclude
 
     // Include dependencies if requested
     if args.include_deps {
@@ -123,6 +127,7 @@ fn print_project_files(
     cwd: &PathBuf,
     grep_pattern: &Option<String>,
     include_files: &Option<Vec<PathBuf>>,
+    exclude_files: &Option<Vec<PathBuf>>, // Change parameter name and type
     writer: &mut Box<dyn Write>,
 ) -> Result<()> {
     // Compile the grep pattern into a regex if provided
@@ -136,6 +141,30 @@ fn print_project_files(
                 .context("Invalid grep pattern")
         }
     }).transpose()?;
+
+    // Canonicalize exclude paths for comparison
+    let canonical_exclude_files: HashSet<PathBuf> = match exclude_files {
+        Some(paths) => {
+            let mut set = HashSet::new();
+            for path in paths {
+                // Attempt to canonicalize relative to cwd
+                match fs::canonicalize(cwd.join(path)) {
+                    Ok(canonical_path) => {
+                        set.insert(canonical_path);
+                    }
+                    Err(e) => {
+                        // Warn if a provided exclude path cannot be canonicalized (e.g., doesn't exist)
+                        // but still add the original path relative to cwd for potential matching later
+                        eprintln!("Warning: Could not canonicalize exclude path '{}': {}. Using relative path.", path.display(), e);
+                        set.insert(cwd.join(path)); // Add the non-canonicalized path relative to cwd
+                    }
+                }
+            }
+            set
+        }
+        None => HashSet::new(),
+    };
+
 
     // Build the walker for the directory
     let mut builder = WalkBuilder::new(cwd);
@@ -159,6 +188,26 @@ fn print_project_files(
         let entry = entry.context("Failed to read directory entry")?;
         if entry.file_type().map_or(false, |ft| ft.is_file()) {
             let path = entry.path();
+
+            // Check if the file should be excluded
+            // Attempt to canonicalize the path found by the walker. If it fails, we probably can't compare reliably, so skip? Or compare non-canonicalized?
+            // Let's try canonicalizing and skip if it fails or if it's in the exclude set.
+            match fs::canonicalize(path) {
+                 Ok(canonical_path) => {
+                     if canonical_exclude_files.contains(&canonical_path) {
+                         continue; // Skip this file if it's in the exclude list
+                     }
+                 }
+                 Err(e) => {
+                     // If we can't canonicalize the walker path, we might still compare against non-canonicalized excludes
+                     if canonical_exclude_files.contains(&path.to_path_buf()) {
+                         continue;
+                     }
+                     // Optionally warn about failing to canonicalize the walked path
+                     // eprintln!("Warning: Could not canonicalize walked path '{}': {}", path.display(), e);
+                 }
+             }
+
 
             // Apply grep filter if provided
             if let Some(ref regex) = grep_regex {
