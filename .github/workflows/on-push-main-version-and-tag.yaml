@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   quality:
-    uses: harmony-labs/workflow-rust-quality/.github/workflows/workflow.yaml@v1.0.0
+    uses: harmony-labs/workflow-rust-quality/.github/workflows/workflow.yaml@v1.0.2
     with:
       lint: false
 
