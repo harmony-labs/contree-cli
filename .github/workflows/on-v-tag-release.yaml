@@ -9,6 +9,6 @@ permissions:
 
 jobs:
   release:
-    uses: harmony-labs/workflow-rust-release/.github/workflows/workflow.yaml@v1.0.1
+    uses: harmony-labs/workflows-rust/.github/workflows/release.yaml@v1.0.0
     with:
-      executable_name: "contree"
+      binary_name: "contree"
