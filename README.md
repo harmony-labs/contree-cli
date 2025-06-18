@@ -29,12 +29,21 @@ contree --help
 
 ## Installation
 
-### Prerequisites
+### Build and Install
+
+#### Downloadable binary
+
+1. Ensure you have `ubi` installed (`brew install ubi` on Mac)
+2. `ubi --project harmony-labs/contree-cli --exe contree --in /usr/local/bin/`
+
+   (`ubi --project harmony-labs/contree-cli --tag v0.1.4 --exe contree --in /usr/local/bin/` for specific version)
+
+#### From source
+
+*Prerequisites*
 
 - [Rust](https://www.rust-lang.org/tools/install) (version 1.56 or later, as it uses the 2021 edition)
 - [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-
-### Build and Install
 
 1. Clone the repository or copy the project files to your local machine.
 2. Navigate to the project directory:
